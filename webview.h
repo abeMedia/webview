@@ -931,7 +931,8 @@ private:
   class webview2_com_handler
       : public ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler,
         public ICoreWebView2CreateCoreWebView2ControllerCompletedHandler,        
-        public ICoreWebView2WebMessageReceivedEventHandler {
+        public ICoreWebView2WebMessageReceivedEventHandler,
+        public ICoreWebView2PermissionRequestedEventHandler {
     using webview2_com_handler_cb_t = std::function<void(ICoreWebView2Controller *)>;
 
   public:
@@ -953,6 +954,7 @@ private:
       EventRegistrationToken token;
       controller->get_CoreWebView2(&webview);
       webview->add_WebMessageReceived(this, &token);
+      webview->add_PermissionRequested(this, &token);
 
       m_cb(controller);
       return S_OK;
@@ -966,6 +968,14 @@ private:
       sender->PostWebMessageAsString(message);
       
       CoTaskMemFree(message);
+      return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* sender, ICoreWebView2PermissionRequestedEventArgs* args) {
+      COREWEBVIEW2_PERMISSION_KIND kind;
+      args->get_PermissionKind(&kind);
+      if (kind == COREWEBVIEW2_PERMISSION_KIND_CLIPBOARD_READ) {
+        args->put_State(COREWEBVIEW2_PERMISSION_STATE_ALLOW);
+      }
       return S_OK;
     }
 
